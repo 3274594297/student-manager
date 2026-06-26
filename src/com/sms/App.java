@@ -110,7 +110,7 @@ public class App {
                 } catch (AuthException e) {
                     ConsoleUtil.printError("登录失败: " + e.getMessage());
                     ConsoleUtil.pause();
-                    if (e.getMessage().contains("锁定")) {
+                    if (e.getMessage().contains("被锁定")) {
                         break;
                     }
                 } catch (BusinessException e) {
