@@ -69,8 +69,21 @@ public class App {
                 return;
             }
 
+            boolean firstTime = true;
             while (true) {
+                if (!firstTime) {
+                    ConsoleUtil.clearScreen();
+                    System.out.println("==================================================");
+                    System.out.println("                 用户登录界面                     ");
+                    System.out.println("==================================================");
+                    System.out.println("请输入用户名 (或输入 0 返回) > " + username);
+                }
+                firstTime = false;
+
                 String password = ConsoleUtil.readPassword("请输入密码");
+                if (password.equals("0")) {
+                    return;
+                }
 
                 try {
                     System.out.println("验证中，请稍候...");
@@ -96,13 +109,8 @@ public class App {
                     return;
                 } catch (AuthException e) {
                     ConsoleUtil.printError("登录失败: " + e.getMessage());
+                    ConsoleUtil.pause();
                     if (e.getMessage().contains("锁定")) {
-                        ConsoleUtil.pause();
-                        break;
-                    }
-                    if (ConsoleUtil.confirm("是否重新输入密码？")) {
-                        continue;
-                    } else {
                         break;
                     }
                 } catch (BusinessException e) {
