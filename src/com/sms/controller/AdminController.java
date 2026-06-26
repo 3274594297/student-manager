@@ -1126,15 +1126,17 @@ public class AdminController {
                     "[1] 查看全部系统账户",
                     "[2] 启用/禁用账户",
                     "[3] 重置账户密码",
+                    "[4] 解除账户登录限制",
                     "[0] 返回上级"
             );
             ConsoleUtil.printMenu("账户安全与权限管理菜单", items);
-            int choice = ConsoleUtil.readChoice("请选择操作", 3);
+            int choice = ConsoleUtil.readChoice("请选择操作", 4);
             if (choice == 0) break;
             switch (choice) {
                 case 1: viewAllAccounts(); break;
                 case 2: toggleAccountStatus(); break;
                 case 3: resetAccountPassword(); break;
+                case 4: unlockAccount(); break;
             }
         }
     }
@@ -1203,6 +1205,48 @@ public class AdminController {
         if (ConsoleUtil.confirm("确认将账户 [" + selected.getUsername() + "] 密码重置？")) {
             userService.resetPassword(selected.getId(), newPassword);
             ConsoleUtil.printSuccess("密码重置成功！");
+        }
+        ConsoleUtil.pause();
+    }
+
+    private void unlockAccount() {
+        System.out.println("---- 解除账户登录限制 ----");
+        List<User> users = userService.listAllUsers();
+        java.util.List<User> lockedUsers = new java.util.ArrayList<>();
+        java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+        for (User u : users) {
+            if ((u.getLockUntil() != null && u.getLockUntil().after(now)) || u.getFailedAttempts() > 0) {
+                lockedUsers.add(u);
+            }
+        }
+
+        if (lockedUsers.isEmpty()) {
+            ConsoleUtil.printSuccess("当前没有被锁定或存在登录失败记录的账户。");
+            ConsoleUtil.pause();
+            return;
+        }
+
+        java.util.List<String> items = new java.util.ArrayList<>();
+        for (int i = 0; i < lockedUsers.size(); i++) {
+            User u = lockedUsers.get(i);
+            String lockStatus = (u.getLockUntil() != null && u.getLockUntil().after(now)) ?
+                    "已锁定 (至 " + u.getLockUntil() + ")" : "失败次数: " + u.getFailedAttempts();
+            items.add(String.format("[%d] 账户:%s | 姓名:%s | 角色:%s | 状态: %s",
+                    i + 1, u.getUsername(), u.getRealName(), u.getRole().name(), lockStatus));
+        }
+
+        ConsoleUtil.printMenu("请选择要解除限制的账户", items);
+        int choice = ConsoleUtil.readChoice("选择", lockedUsers.size());
+        if (choice == 0) return;
+
+        User selected = lockedUsers.get(choice - 1);
+        if (ConsoleUtil.confirm("确认要清除账户 [" + selected.getUsername() + "] 的登录限制吗？")) {
+            try {
+                userService.unlockUser(selected.getId());
+                ConsoleUtil.printSuccess("解锁成功！账户限制已清除。");
+            } catch (Exception e) {
+                ConsoleUtil.printError("解锁失败: " + e.getMessage());
+            }
         }
         ConsoleUtil.pause();
     }

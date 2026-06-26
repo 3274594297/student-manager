@@ -132,4 +132,15 @@ public class UserServiceImpl implements UserService {
         userDAO.insert(u);
         return u;
     }
+
+    @Override
+    public void unlockUser(Integer targetUserId) {
+        User user = userDAO.findById(targetUserId);
+        if (user == null) {
+            throw new EntityNotFoundException("用户不存在");
+        }
+        user.setFailedAttempts(0);
+        user.setLockUntil(null);
+        userDAO.update(user);
+    }
 }

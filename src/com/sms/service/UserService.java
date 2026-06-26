@@ -10,4 +10,5 @@ public interface UserService {
     void toggleUserStatus(Integer targetUserId, Integer status);
     List<User> listAllUsers();
     User registerUser(String username, String password, String realName, String roleName);
+    void unlockUser(Integer targetUserId);
 }
