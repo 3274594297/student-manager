@@ -70,10 +70,7 @@ public class App {
             }
 
             while (true) {
-                String password = ConsoleUtil.readPassword("请输入密码 (或输入 0 重新输入用户名)");
-                if (password.equals("0")) {
-                    break;
-                }
+                String password = ConsoleUtil.readPassword("请输入密码");
 
                 try {
                     System.out.println("验证中，请稍候...");
