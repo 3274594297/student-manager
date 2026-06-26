@@ -58,45 +58,67 @@ public class App {
     }
 
     private static void runLoginProcess() {
-        ConsoleUtil.clearScreen();
-        System.out.println("==================================================");
-        System.out.println("                 用户登录界面                     ");
-        System.out.println("==================================================");
-        
-        String username = ConsoleUtil.readLine("请输入用户名", false);
-        String password = ConsoleUtil.readPassword("请输入密码");
+        while (true) {
+            ConsoleUtil.clearScreen();
+            System.out.println("==================================================");
+            System.out.println("                 用户登录界面                     ");
+            System.out.println("==================================================");
 
-        try {
-            System.out.println("验证中，请稍候...");
-            User loggedIn = userService.login(username, password);
-            ConsoleUtil.printSuccess("登录成功！欢迎回来，" + loggedIn.getRealName());
-            ConsoleUtil.pause();
-
-            // Route by role
-            switch (loggedIn.getRole()) {
-                case ADMIN:
-                    adminController.showMainMenu(loggedIn);
-                    break;
-                case TEACHER:
-                    teacherController.showMainMenu(loggedIn);
-                    break;
-                case STUDENT:
-                    studentController.showMainMenu(loggedIn);
-                    break;
-                default:
-                    ConsoleUtil.printError("未知角色权限，登录取消。");
-                    ConsoleUtil.pause();
+            String username = ConsoleUtil.readLine("请输入用户名 (或输入 0 返回)", false);
+            if (username.equals("0")) {
+                return;
             }
-        } catch (AuthException e) {
-            ConsoleUtil.printError("登录失败: " + e.getMessage());
-            ConsoleUtil.pause();
-        } catch (BusinessException e) {
-            ConsoleUtil.printError("业务逻辑异常: " + e.getMessage());
-            ConsoleUtil.pause();
-        } catch (Exception e) {
-            ConsoleUtil.printError("发生未知系统错误: " + e.getMessage());
-            e.printStackTrace();
-            ConsoleUtil.pause();
+
+            while (true) {
+                String password = ConsoleUtil.readPassword("请输入密码 (或输入 0 重新输入用户名)");
+                if (password.equals("0")) {
+                    break;
+                }
+
+                try {
+                    System.out.println("验证中，请稍候...");
+                    User loggedIn = userService.login(username, password);
+                    ConsoleUtil.printSuccess("登录成功！欢迎回来，" + loggedIn.getRealName());
+                    ConsoleUtil.pause();
+
+                    // Route by role
+                    switch (loggedIn.getRole()) {
+                        case ADMIN:
+                            adminController.showMainMenu(loggedIn);
+                            break;
+                        case TEACHER:
+                            teacherController.showMainMenu(loggedIn);
+                            break;
+                        case STUDENT:
+                            studentController.showMainMenu(loggedIn);
+                            break;
+                        default:
+                            ConsoleUtil.printError("未知角色权限，登录取消。");
+                            ConsoleUtil.pause();
+                    }
+                    return;
+                } catch (AuthException e) {
+                    ConsoleUtil.printError("登录失败: " + e.getMessage());
+                    if (e.getMessage().contains("锁定")) {
+                        ConsoleUtil.pause();
+                        break;
+                    }
+                    if (ConsoleUtil.confirm("是否重新输入密码？")) {
+                        continue;
+                    } else {
+                        break;
+                    }
+                } catch (BusinessException e) {
+                    ConsoleUtil.printError("业务逻辑异常: " + e.getMessage());
+                    ConsoleUtil.pause();
+                    break;
+                } catch (Exception e) {
+                    ConsoleUtil.printError("发生未知系统错误: " + e.getMessage());
+                    e.printStackTrace();
+                    ConsoleUtil.pause();
+                    break;
+                }
+            }
         }
     }
 }
