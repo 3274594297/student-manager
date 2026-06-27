@@ -106,7 +106,11 @@ public class AttendanceDAOImpl implements AttendanceDAO {
     @Override
     public List<Attendance> findByPlanAndDate(Integer planId, Date date) {
         try {
-            return DBUtil.executeQuery(BASE_SELECT + "WHERE a.teaching_plan_id = ? AND a.attend_date = ? ORDER BY st.student_no", mapper, planId, date);
+            if (date == null) {
+                return DBUtil.executeQuery(BASE_SELECT + "WHERE a.teaching_plan_id = ? ORDER BY st.student_no", mapper, planId);
+            } else {
+                return DBUtil.executeQuery(BASE_SELECT + "WHERE a.teaching_plan_id = ? AND a.attend_date = ? ORDER BY st.student_no", mapper, planId, date);
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

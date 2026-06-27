@@ -118,7 +118,7 @@ erDiagram
   | `user_id` | `INT` | `UNIQUE`, `FOREIGN KEY` $\rightarrow$ `user(id)` | 关联用户账户 |
   | `student_no` | `VARCHAR(20)` | `NOT NULL`, `UNIQUE` | 学号 |
   | `name` | `VARCHAR(50)` | `NOT NULL` | 姓名 |
-  | `gender` | `VARCHAR(10)` | `NOT NULL` | 性别 |
+  | `gender` | `VARCHAR(10)` | `NOT NULL`, `CHECK (gender IN ('男', '女'))` | 性别 |
   | `birth_date` | `DATE` | `NOT NULL` | 出生日期 |
   | `phone` | `VARCHAR(20)` | 可空 | 联系电话 |
   | `email` | `VARCHAR(50)` | 可空 | 电子邮箱 |

@@ -11,6 +11,7 @@ import com.sms.util.ConsoleUtil;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -294,7 +295,13 @@ public class TeacherController {
 
     private void takeClassAttendance(Integer planId) {
         System.out.println("---- 课堂考勤点名 ----");
-        Date date = ConsoleUtil.readDate("请输入考勤点名日期");
+        Date date;
+        Date today = new Date(System.currentTimeMillis());
+        if (ConsoleUtil.confirm("今天是 " + today.toString() + "，是否使用今天作为考勤点名日期？")) {
+            date = today;
+        } else {
+            date = ConsoleUtil.readDate("请输入实际的考勤点名日期");
+        }
         
         // Retrieve all student score records which double as class selection listings
         List<Score> students = educationService.listScoresByPlan(planId);
@@ -304,30 +311,115 @@ public class TeacherController {
             return;
         }
 
-        System.out.println("进入逐个点名状态。请输入对应的状态编号:");
-        System.out.println("  [1] 出勤   [2] 迟到   [3] 早退   [4] 旷课   [5] 请假");
+        // Fetch existing attendance records for this plan and date to pre-populate statuses
+        List<Attendance> exist = educationService.listAttendanceByPlanAndDate(planId, date);
+        Map<Integer, Attendance> existMap = new HashMap<>();
+        for (Attendance a : exist) {
+            existMap.put(a.getStudentId(), a);
+        }
+
         List<Attendance> attendList = new ArrayList<>();
-        
         for (Score s : students) {
-            System.out.printf("学生: %s (%s) > ", s.getStudentName(), s.getStudentNo());
-            int statusInt = ConsoleUtil.readInt("", 1, 5);
-            String status = "出勤";
-            if (statusInt == 2) status = "迟到";
-            else if (statusInt == 3) status = "早退";
-            else if (statusInt == 4) status = "旷课";
-            else if (statusInt == 5) status = "请假";
-
-            String remark = "";
-            if (statusInt != 1) {
-                remark = ConsoleUtil.readLine("备注异常情况 (回车跳过)");
-            }
-
             Attendance att = new Attendance();
             att.setStudentId(s.getStudentId());
-            att.setStatus(status);
-            att.setRemark(remark.isEmpty() ? null : remark);
+            att.setStudentNo(s.getStudentNo());
+            att.setStudentName(s.getStudentName());
+            att.setClassName(s.getClassName());
+            
+            // Check if there is an existing record (e.g., approved leave)
+            Attendance ex = existMap.get(s.getStudentId());
+            if (ex != null) {
+                att.setStatus(ex.getStatus());
+                att.setRemark(ex.getRemark());
+            } else {
+                att.setStatus("出勤");
+                att.setRemark(null);
+            }
             attendList.add(att);
         }
+
+        // Print initial status list
+        System.out.println("\n---- 本班学生考勤状态初始化一览 ----");
+        List<String> headers = Arrays.asList("序号", "学号", "姓名", "班级", "当前考勤状态", "备注");
+        List<List<String>> rows = new ArrayList<>();
+        for (int i = 0; i < attendList.size(); i++) {
+            Attendance att = attendList.get(i);
+            rows.add(Arrays.asList(
+                String.valueOf(i + 1),
+                att.getStudentNo(),
+                att.getStudentName(),
+                att.getClassName() != null ? att.getClassName() : "自由选修",
+                att.getStatus(),
+                att.getRemark() != null ? att.getRemark() : ""
+            ));
+        }
+        ConsoleUtil.printTable(headers, rows);
+
+        System.out.println("\n批量修改模式：请输入相应状态的学生序号，多个序号可用空格或逗号分隔（如: 1,3,5），直接回车表示无");
+
+        // 1. Absent (旷课)
+        String absentInput = ConsoleUtil.readLine("请输入【旷课】学生的序号");
+        List<Integer> absentIdxs = parseIndices(absentInput, attendList.size());
+        for (int idx : absentIdxs) {
+            Attendance att = attendList.get(idx - 1);
+            att.setStatus("旷课");
+            String remark = ConsoleUtil.readLine("请输入学生 " + att.getStudentName() + " 的旷课备注 (回车跳过)", true);
+            if (!remark.isEmpty()) {
+                att.setRemark(remark);
+            }
+        }
+
+        // 2. Late (迟到)
+        String lateInput = ConsoleUtil.readLine("请输入【迟到】学生的序号");
+        List<Integer> lateIdxs = parseIndices(lateInput, attendList.size());
+        for (int idx : lateIdxs) {
+            Attendance att = attendList.get(idx - 1);
+            att.setStatus("迟到");
+            String remark = ConsoleUtil.readLine("请输入学生 " + att.getStudentName() + " 的迟到备注 (回车跳过)", true);
+            if (!remark.isEmpty()) {
+                att.setRemark(remark);
+            }
+        }
+
+        // 3. Early (早退)
+        String earlyInput = ConsoleUtil.readLine("请输入【早退】学生的序号");
+        List<Integer> earlyIdxs = parseIndices(earlyInput, attendList.size());
+        for (int idx : earlyIdxs) {
+            Attendance att = attendList.get(idx - 1);
+            att.setStatus("早退");
+            String remark = ConsoleUtil.readLine("请输入学生 " + att.getStudentName() + " 的早退备注 (回车跳过)", true);
+            if (!remark.isEmpty()) {
+                att.setRemark(remark);
+            }
+        }
+
+        // 4. Leave (请假 - 手动添加非审批假条的情况)
+        String leaveInput = ConsoleUtil.readLine("请输入其他【请假】学生的序号");
+        List<Integer> leaveIdxs = parseIndices(leaveInput, attendList.size());
+        for (int idx : leaveIdxs) {
+            Attendance att = attendList.get(idx - 1);
+            att.setStatus("请假");
+            String remark = ConsoleUtil.readLine("请输入学生 " + att.getStudentName() + " 的请假备注 (回车跳过)", true);
+            if (!remark.isEmpty()) {
+                att.setRemark(remark);
+            }
+        }
+
+        // Print confirmation list
+        System.out.println("\n---- 修改后考勤状态确认一览 ----");
+        rows.clear();
+        for (int i = 0; i < attendList.size(); i++) {
+            Attendance att = attendList.get(i);
+            rows.add(Arrays.asList(
+                String.valueOf(i + 1),
+                att.getStudentNo(),
+                att.getStudentName(),
+                att.getClassName() != null ? att.getClassName() : "自由选修",
+                att.getStatus(),
+                att.getRemark() != null ? att.getRemark() : ""
+            ));
+        }
+        ConsoleUtil.printTable(headers, rows);
 
         if (ConsoleUtil.confirm("\n点名录入完毕。确认保存该考勤记录？")) {
             try {
@@ -340,9 +432,53 @@ public class TeacherController {
         ConsoleUtil.pause();
     }
 
+    private List<Integer> parseIndices(String input, int maxIndex) {
+        List<Integer> list = new ArrayList<>();
+        if (input == null || input.trim().isEmpty()) return list;
+        String[] parts = input.split("[,\\s]+");
+        for (String part : parts) {
+            try {
+                int idx = Integer.parseInt(part.trim());
+                if (idx >= 1 && idx <= maxIndex) {
+                    list.add(idx);
+                } else {
+                    System.out.println("[警告] 忽略超出有效范围的序号: " + part);
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("[警告] 忽略无效的数字输入: " + part);
+            }
+        }
+        return list;
+    }
+
     private void viewClassAttendance(Integer planId) {
         System.out.println("---- 查看指定日期考勤 ----");
-        Date date = ConsoleUtil.readDate("日期");
+        
+        // Fetch all attendance records for this plan to find distinct dates
+        List<Attendance> allAttendance = educationService.listAttendanceByPlanAndDate(planId, null);
+        java.util.Set<Date> dateSet = new java.util.TreeSet<>(java.util.Collections.reverseOrder());
+        for (Attendance a : allAttendance) {
+            if (a.getAttendDate() != null) {
+                dateSet.add(a.getAttendDate());
+            }
+        }
+        
+        if (dateSet.isEmpty()) {
+            ConsoleUtil.printError("该课程暂无任何历史考勤记录！");
+            ConsoleUtil.pause();
+            return;
+        }
+
+        List<Date> dateList = new ArrayList<>(dateSet);
+        List<String> items = new ArrayList<>();
+        for (int i = 0; i < dateList.size(); i++) {
+            items.add(String.format("[%d] %s", i + 1, dateList.get(i).toString()));
+        }
+        ConsoleUtil.printMenu("请选择要查看的考勤日期 (已按最近时间排序)", items);
+        int choice = ConsoleUtil.readChoice("选择日期", dateList.size());
+        if (choice == 0) return;
+        
+        Date date = dateList.get(choice - 1);
         List<Attendance> attendances = educationService.listAttendanceByPlanAndDate(planId, date);
         if (attendances.isEmpty()) {
             ConsoleUtil.printError("该日期下没有找到点名考勤记录");

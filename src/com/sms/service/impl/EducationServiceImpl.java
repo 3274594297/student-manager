@@ -510,15 +510,23 @@ public class EducationServiceImpl implements EducationService {
                         List<Attendance> sAtt = attendanceDAO.findByStudentAndCourse(s.getId(), tp.getId());
                         for (Attendance a : sAtt) {
                             totalAttendance++;
-                            if ("出勤".equals(a.getStatus())) presentCount++;
-                            else absentCount++;
+                            String status = a.getStatus();
+                            if ("出勤".equals(status) || "迟到".equals(status) || "早退".equals(status)) {
+                                presentCount++;
+                            } else {
+                                absentCount++;
+                            }
                         }
                     }
                 } else {
                     for (Attendance a : attList) {
                         totalAttendance++;
-                        if ("出勤".equals(a.getStatus())) presentCount++;
-                        else absentCount++;
+                        String status = a.getStatus();
+                        if ("出勤".equals(status) || "迟到".equals(status) || "早退".equals(status)) {
+                            presentCount++;
+                        } else {
+                            absentCount++;
+                        }
                     }
                 }
             }
