@@ -122,6 +122,25 @@ public class AcademicServiceImpl implements AcademicService {
         return teachingPlanDAO.findElectives(semester);
     }
 
+    @Override
+    public List<TeachingPlan> listAvailableElectivePlansForStudent(Integer studentId, String semester) {
+        List<TeachingPlan> allElectives = teachingPlanDAO.findElectives(semester);
+        List<TeachingPlan> selected = listStudentSelectedPlans(studentId, semester);
+        
+        java.util.Set<Integer> selectedPlanIds = new java.util.HashSet<>();
+        for (TeachingPlan tp : selected) {
+            selectedPlanIds.add(tp.getId());
+        }
+        
+        List<TeachingPlan> available = new java.util.ArrayList<>();
+        for (TeachingPlan tp : allElectives) {
+            if (!selectedPlanIds.contains(tp.getId())) {
+                available.add(tp);
+            }
+        }
+        return available;
+    }
+
     // Student Course Selection
     @Override
     public void selectElective(Integer studentId, Integer teachingPlanId) {
@@ -211,9 +230,13 @@ public class AcademicServiceImpl implements AcademicService {
         // Find plans through student's scores
         List<Score> scores = scoreDAO.findByStudentId(studentId, semester);
         List<TeachingPlan> plans = new java.util.ArrayList<>();
+        java.util.Set<Integer> seenIds = new java.util.HashSet<>();
         for (Score s : scores) {
-            TeachingPlan p = teachingPlanDAO.findById(s.getTeachingPlanId());
-            if (p != null) plans.add(p);
+            if (s.getTeachingPlanId() != null && !seenIds.contains(s.getTeachingPlanId())) {
+                seenIds.add(s.getTeachingPlanId());
+                TeachingPlan p = teachingPlanDAO.findById(s.getTeachingPlanId());
+                if (p != null) plans.add(p);
+            }
         }
         return plans;
     }

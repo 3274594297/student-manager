@@ -23,6 +23,7 @@ public interface AcademicService {
     List<TeachingPlan> listTeachingPlansByClass(Integer classId, String semester);
     List<TeachingPlan> listTeachingPlansByTeacher(Integer teacherId, String semester);
     List<TeachingPlan> listElectivePlans(String semester);
+    List<TeachingPlan> listAvailableElectivePlansForStudent(Integer studentId, String semester);
 
     // Student Course Selection
     void selectElective(Integer studentId, Integer teachingPlanId);

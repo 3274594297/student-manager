@@ -413,6 +413,10 @@ public class AdminServiceImpl implements AdminService {
             String studentNo = row.get(0).trim();
             String name = row.get(1).trim();
             String gender = row.get(2).trim();
+
+            if (!"男".equals(gender) && !"女".equals(gender)) {
+                continue;
+            }
             String birthDateStr = row.get(3).trim();
             String phone = row.get(4).trim();
             String email = row.get(5).trim();

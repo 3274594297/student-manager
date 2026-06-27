@@ -80,7 +80,7 @@ CREATE TABLE student (
     user_id INT UNIQUE NOT NULL,
     student_no VARCHAR(20) NOT NULL UNIQUE,
     name VARCHAR(50) NOT NULL,
-    gender VARCHAR(10) NOT NULL,
+    gender VARCHAR(10) NOT NULL CHECK (gender IN ('男', '女')),
     birth_date DATE NOT NULL,
     phone VARCHAR(20),
     email VARCHAR(50),

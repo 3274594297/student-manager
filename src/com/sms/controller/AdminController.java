@@ -153,7 +153,14 @@ public class AdminController {
             return;
         }
         String name = ConsoleUtil.readLine("姓名", false);
-        String gender = ConsoleUtil.readLine("性别", false);
+        String gender;
+        while (true) {
+            gender = ConsoleUtil.readLine("性别 (男/女)", false);
+            if ("男".equals(gender) || "女".equals(gender)) {
+                break;
+            }
+            ConsoleUtil.printError("性别只能为 '男' 或 '女'，请重新输入");
+        }
         Date birthDate = ConsoleUtil.readDate("出生日期");
         String phone = ConsoleUtil.readLine("手机号 (可选)");
         String email = ConsoleUtil.readLine("邮箱 (可选)");
@@ -199,7 +206,14 @@ public class AdminController {
         String name = ConsoleUtil.readLine("姓名 (回车默认: " + s.getName() + ")");
         if (!name.isEmpty()) s.setName(name);
 
-        String gender = ConsoleUtil.readLine("性别 (回车默认: " + s.getGender() + ")");
+        String gender;
+        while (true) {
+            gender = ConsoleUtil.readLine("性别 (回车默认: " + s.getGender() + ")");
+            if (gender.isEmpty() || "男".equals(gender) || "女".equals(gender)) {
+                break;
+            }
+            ConsoleUtil.printError("性别只能为 '男' 或 '女'，请重新输入");
+        }
         if (!gender.isEmpty()) s.setGender(gender);
 
         Date bDate = ConsoleUtil.readDateOptional("出生日期", s.getBirthDate());

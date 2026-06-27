@@ -93,7 +93,7 @@ public class StudentController {
             if (choice == 0) break;
             switch (choice) {
                 case 1: viewMySelectedCourses(s, semester); break;
-                case 2: viewAvailableElectives(semester); break;
+                case 2: viewAvailableElectives(s, semester); break;
                 case 3: enrollElectiveCourse(s, semester); break;
                 case 4: dropElectiveCourse(s, semester); break;
             }
@@ -124,8 +124,8 @@ public class StudentController {
         ConsoleUtil.pause();
     }
 
-    private void viewAvailableElectives(String semester) {
-        List<TeachingPlan> electives = academicService.listElectivePlans(semester);
+    private void viewAvailableElectives(Student s, String semester) {
+        List<TeachingPlan> electives = academicService.listAvailableElectivePlansForStudent(s.getId(), semester);
         System.out.println("---- 本学期可选课列表 ----");
         List<String> headers = Arrays.asList("ID", "课程名称", "课程类型", "学分", "主讲老师", "容量上限", "当前选课人数");
         List<List<String>> rows = new ArrayList<>();
@@ -146,7 +146,7 @@ public class StudentController {
 
     private void enrollElectiveCourse(Student s, String semester) {
         System.out.println("---- 学生自主选课 ----");
-        List<TeachingPlan> electives = academicService.listElectivePlans(semester);
+        List<TeachingPlan> electives = academicService.listAvailableElectivePlansForStudent(s.getId(), semester);
         if (electives.isEmpty()) {
             ConsoleUtil.printError("本学期没有开设任何可选修的课程！");
             ConsoleUtil.pause();
