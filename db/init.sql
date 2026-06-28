@@ -190,13 +190,17 @@ CREATE TABLE notice (
 CREATE TABLE leave_request (
     id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
+    teaching_plan_id INT DEFAULT NULL COMMENT '特定课程ID，全天请假时为NULL',
     start_date DATE NOT NULL,
+    start_hour INT NOT NULL DEFAULT 0,
     end_date DATE NOT NULL,
+    end_hour INT NOT NULL DEFAULT 23,
     reason VARCHAR(200) NOT NULL,
     status ENUM('待审批', '已批准', '已拒绝') NOT NULL DEFAULT '待审批',
     approver_id INT DEFAULT NULL,
     approve_time TIMESTAMP NULL DEFAULT NULL,
     remark VARCHAR(100) DEFAULT NULL,
     FOREIGN KEY (student_id) REFERENCES student(id) ON DELETE CASCADE,
-    FOREIGN KEY (approver_id) REFERENCES user(id) ON DELETE SET NULL
+    FOREIGN KEY (approver_id) REFERENCES user(id) ON DELETE SET NULL,
+    FOREIGN KEY (teaching_plan_id) REFERENCES teaching_plan(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;

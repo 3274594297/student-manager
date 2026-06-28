@@ -7,18 +7,28 @@ public class LeaveRequest {
     private Integer id;
     private Integer studentId;
     private Date startDate;
+    private Integer startHour;
     private Date endDate;
+    private Integer endHour;
     private String reason;
     private String status; // 待审批, 已批准, 已拒绝
     private Integer approverId;
     private Timestamp approveTime;
     private String remark;
+    private Integer teachingPlanId;
 
     // Joint fields for display
     private String studentNo;
     private String studentName;
     private String className;
     private String approverName;
+    private String courseName;
+
+    public Integer getTeachingPlanId() { return teachingPlanId; }
+    public void setTeachingPlanId(Integer teachingPlanId) { this.teachingPlanId = teachingPlanId; }
+
+    public String getCourseName() { return courseName; }
+    public void setCourseName(String courseName) { this.courseName = courseName; }
 
     public LeaveRequest() {}
 
@@ -40,8 +50,14 @@ public class LeaveRequest {
     public Date getStartDate() { return startDate; }
     public void setStartDate(Date startDate) { this.startDate = startDate; }
 
+    public Integer getStartHour() { return startHour; }
+    public void setStartHour(Integer startHour) { this.startHour = startHour; }
+
     public Date getEndDate() { return endDate; }
     public void setEndDate(Date endDate) { this.endDate = endDate; }
+
+    public Integer getEndHour() { return endHour; }
+    public void setEndHour(Integer endHour) { this.endHour = endHour; }
 
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }

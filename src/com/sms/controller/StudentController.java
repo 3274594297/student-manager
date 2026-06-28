@@ -219,7 +219,7 @@ public class StudentController {
 
     // --- 3. TIMETABLE ---
     private void viewMyTimetable(Student s, String semester) {
-        List<Schedule> list = academicService.listSchedulesByClass(s.getClassId(), semester);
+        List<Schedule> list = academicService.listSchedulesByStudent(s.getId(), semester);
         if (list.isEmpty()) {
             ConsoleUtil.printError("您的课表当前为空");
             ConsoleUtil.pause();
@@ -306,23 +306,104 @@ public class StudentController {
 
     private void applyForLeave(Student s) {
         System.out.println("---- 申请请假 ----");
-        Date start = ConsoleUtil.readDate("请输入请假起始日期");
-        Date end = ConsoleUtil.readDate("请输入请假结束日期");
-        if (start.after(end)) {
+        java.sql.Date today = new java.sql.Date(System.currentTimeMillis());
+        java.sql.Date start = ConsoleUtil.readDateOptional("请输入请假起始/指定日期", today);
+        if (start == null) {
+            ConsoleUtil.printError("操作已取消。");
+            ConsoleUtil.pause();
+            return;
+        }
+
+        int startHour = ConsoleUtil.readInt("请输入请假开始时间点 (0-23, 24小时制)", 0, 23);
+
+        java.sql.Date end = ConsoleUtil.readDateOptional("请输入请假结束日期", start);
+        if (end == null) {
+            ConsoleUtil.printError("操作已取消。");
+            ConsoleUtil.pause();
+            return;
+        }
+
+        int endHour = ConsoleUtil.readInt("请输入请假结束时间点 (0-23, 24小时制)", 0, 23);
+
+        if (start.after(end) || (start.equals(end) && startHour > endHour)) {
             ConsoleUtil.printError("错误：请假开始时间不能在结束时间之后！");
             ConsoleUtil.pause();
             return;
         }
+
         String reason = ConsoleUtil.readLine("请输入合理的请假事由", false);
 
-        LeaveRequest req = new LeaveRequest();
-        req.setStudentId(s.getId());
-        req.setStartDate(start);
-        req.setEndDate(end);
-        req.setReason(reason);
+        // Fetch student schedules to check which classes overlap
+        List<Schedule> allSchedules = academicService.listSchedulesByStudent(s.getId(), "2025-2026-1");
+        List<Schedule> affectedClasses = new ArrayList<>();
 
-        System.out.printf("\n请假确认：日期: %s 至 %s | 原因: %s\n", start, end, reason);
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.setTime(start);
+        while (!cal.getTime().after(end)) {
+            java.sql.Date checkDate = new java.sql.Date(cal.getTime().getTime());
+            
+            // Determine Day of Week (1=Monday, ..., 7=Sunday)
+            java.util.Calendar tempCal = java.util.Calendar.getInstance();
+            tempCal.setTime(checkDate);
+            int calendarDay = tempCal.get(java.util.Calendar.DAY_OF_WEEK);
+            int dayOfWeek = (calendarDay == java.util.Calendar.SUNDAY) ? 7 : (calendarDay - 1);
+
+            for (Schedule sc : allSchedules) {
+                if (sc.getDayOfWeek().equals(dayOfWeek)) {
+                    int classStartHour = getSectionStartHour(sc.getSectionStart());
+                    int classEndHour = getSectionEndHour(sc.getSectionEnd());
+                    
+                    boolean overlaps = false;
+                    if (checkDate.toString().equals(start.toString()) && checkDate.toString().equals(end.toString())) {
+                        overlaps = (classEndHour > startHour) && (classStartHour < endHour);
+                    } else if (checkDate.toString().equals(start.toString())) {
+                        overlaps = (classEndHour > startHour);
+                    } else if (checkDate.toString().equals(end.toString())) {
+                        overlaps = (classStartHour < endHour);
+                    } else {
+                        overlaps = true;
+                    }
+
+                    if (overlaps) {
+                        // Check duplicates
+                        boolean dup = false;
+                        for (Schedule ac : affectedClasses) {
+                            if (ac.getTeachingPlanId().equals(sc.getTeachingPlanId())) {
+                                dup = true;
+                                break;
+                            }
+                        }
+                        if (!dup) affectedClasses.add(sc);
+                    }
+                }
+            }
+            cal.add(java.util.Calendar.DATE, 1);
+        }
+
+        System.out.println("\n----------------------------------");
+        System.out.println("请假时间: " + start + " " + startHour + "时 至 " + end + " " + endHour + "时");
+        if (affectedClasses.isEmpty()) {
+            System.out.println("检测课程: 该时间段内您没有要上的课程记录。");
+        } else {
+            System.out.println("检测课程: 该时间段内您有以下课程需要请假：");
+            for (Schedule sc : affectedClasses) {
+                System.out.printf("  - %s (任课老师: %s | 时间: 周%d第%d-%d节)\n",
+                        sc.getCourseName(), sc.getTeacherName(), sc.getDayOfWeek(), sc.getSectionStart(), sc.getSectionEnd());
+            }
+        }
+        System.out.println("请假原因: " + reason);
+        System.out.println("----------------------------------");
+
         if (ConsoleUtil.confirm("确认提交此请假申请？")) {
+            LeaveRequest req = new LeaveRequest();
+            req.setStudentId(s.getId());
+            req.setTeachingPlanId(null); // Range-based leave with hour bounds
+            req.setStartDate(start);
+            req.setStartHour(startHour);
+            req.setEndDate(end);
+            req.setEndHour(endHour);
+            req.setReason(reason);
+
             try {
                 educationService.applyLeave(req);
                 ConsoleUtil.printSuccess("请假申请已提交，请等待您的班主任老师审批！");
@@ -342,12 +423,12 @@ public class StudentController {
             return;
         }
 
-        List<String> headers = Arrays.asList("起始日期", "结束日期", "请假原因", "审批状态", "审批人", "审批意见");
+        List<String> headers = Arrays.asList("起始时间", "结束时间", "请假原因", "审批状态", "审批人", "审批意见");
         List<List<String>> rows = new ArrayList<>();
         for (LeaveRequest lr : list) {
             rows.add(Arrays.asList(
-                    lr.getStartDate().toString(),
-                    lr.getEndDate().toString(),
+                    lr.getStartDate().toString() + " " + lr.getStartHour() + "时",
+                    lr.getEndDate().toString() + " " + lr.getEndHour() + "时",
                     lr.getReason(),
                     lr.getStatus(),
                     lr.getApproverName() != null ? lr.getApproverName() : "无",
@@ -412,5 +493,41 @@ public class StudentController {
             ConsoleUtil.printError("修改失败: " + e.getMessage());
         }
         ConsoleUtil.pause();
+    }
+
+    private static int getSectionStartHour(int section) {
+        switch (section) {
+            case 1: return 8;
+            case 2: return 9;
+            case 3: return 10;
+            case 4: return 11;
+            case 5: return 14;
+            case 6: return 15;
+            case 7: return 16;
+            case 8: return 17;
+            case 9: return 19;
+            case 10: return 20;
+            case 11: return 21;
+            case 12: return 22;
+            default: return 8;
+        }
+    }
+
+    private static int getSectionEndHour(int section) {
+        switch (section) {
+            case 1: return 9;
+            case 2: return 10;
+            case 3: return 11;
+            case 4: return 12;
+            case 5: return 15;
+            case 6: return 16;
+            case 7: return 17;
+            case 8: return 18;
+            case 9: return 20;
+            case 10: return 21;
+            case 11: return 22;
+            case 12: return 23;
+            default: return 23;
+        }
     }
 }

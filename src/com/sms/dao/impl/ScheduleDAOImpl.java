@@ -103,6 +103,19 @@ public class ScheduleDAOImpl implements ScheduleDAO {
 
 
     @Override
+    public List<Schedule> findByStudentId(Integer studentId, String semester) {
+        try {
+            String sql = BASE_SELECT + "WHERE (tp.class_id = (SELECT class_id FROM student WHERE id = ?) OR tp.id IN (" +
+                    "  SELECT e.teaching_plan_id FROM enrollment e WHERE e.student_id = ?" +
+                    ")) AND tp.semester = ? ORDER BY s.day_of_week, s.section_start";
+            return DBUtil.executeQuery(sql, mapper, studentId, studentId, semester);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    @Override
     public List<Schedule> findByTeacherId(Integer teacherId, String semester) {
         try {
             return DBUtil.executeQuery(BASE_SELECT + "WHERE tp.teacher_id = ? AND tp.semester = ? ORDER BY s.day_of_week, s.section_start", mapper, teacherId, semester);

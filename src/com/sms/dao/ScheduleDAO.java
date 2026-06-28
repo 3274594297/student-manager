@@ -9,6 +9,7 @@ public interface ScheduleDAO {
     int update(Schedule schedule);
     int deleteById(Integer id);
     List<Schedule> findByClassId(Integer classId, String semester);
+    List<Schedule> findByStudentId(Integer studentId, String semester);
     List<Schedule> findByTeacherId(Integer teacherId, String semester);
     List<Schedule> findByClassroom(String classroom, String semester);
     List<Schedule> findByPlanId(Integer planId);

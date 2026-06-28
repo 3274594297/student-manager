@@ -530,16 +530,18 @@ public class TeacherController {
             }
 
             System.out.println("---- 待审批的学生请假申请表 ----");
-            List<String> headers = Arrays.asList("ID", "班级", "学号", "姓名", "开始日期", "结束日期", "请假原因");
+            List<String> headers = Arrays.asList("ID", "班级", "是否跨夜", "学号", "姓名", "开始时间", "结束时间", "请假原因");
             List<List<String>> rows = new ArrayList<>();
             for (LeaveRequest lr : list) {
+                boolean isOvernight = !lr.getStartDate().toString().equals(lr.getEndDate().toString());
                 rows.add(Arrays.asList(
                         lr.getId().toString(),
                         lr.getClassName(),
+                        isOvernight ? "是" : "否",
                         lr.getStudentNo(),
                         lr.getStudentName(),
-                        lr.getStartDate().toString(),
-                        lr.getEndDate().toString(),
+                        lr.getStartDate().toString() + " " + lr.getStartHour() + "时",
+                        lr.getEndDate().toString() + " " + lr.getEndHour() + "时",
                         lr.getReason()
                 ));
             }
@@ -564,7 +566,9 @@ public class TeacherController {
                 continue;
             }
 
-            System.out.println("您正在审批: " + selected.getStudentName() + " 的请假申请 (" + selected.getStartDate() + " 至 " + selected.getEndDate() + ")");
+            System.out.println("您正在审批: " + selected.getStudentName() + " 的请假申请 (" 
+                    + selected.getStartDate() + " " + selected.getStartHour() + "时 至 " 
+                    + selected.getEndDate() + " " + selected.getEndHour() + "时)");
             System.out.println("请给出审批意见:\n  [1] 批准请假\n  [2] 拒绝请假\n  [0] 暂不处理");
             int decision = ConsoleUtil.readChoice("审批选择", 2);
             if (decision == 0) continue;

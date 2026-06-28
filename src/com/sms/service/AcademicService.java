@@ -34,6 +34,7 @@ public interface AcademicService {
     void addSchedule(Schedule schedule);
     void deleteSchedule(Integer id);
     List<Schedule> listSchedulesByClass(Integer classId, String semester);
+    List<Schedule> listSchedulesByStudent(Integer studentId, String semester);
     List<Schedule> listSchedulesByTeacher(Integer teacherId, String semester);
     List<Schedule> listSchedulesByClassroom(String classroom, String semester);
     List<Schedule> listSchedulesByPlan(Integer planId);

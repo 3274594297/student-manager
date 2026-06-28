@@ -26,6 +26,12 @@ public class LeaveRequestDAOImpl implements LeaveRequestDAO {
             }
             lr.setApproveTime(rs.getTimestamp("approve_time"));
             lr.setRemark(rs.getString("remark"));
+            lr.setStartHour(rs.getInt("start_hour"));
+            lr.setEndHour(rs.getInt("end_hour"));
+            lr.setTeachingPlanId(rs.getInt("teaching_plan_id"));
+            if (lr.getTeachingPlanId() == 0) {
+                lr.setTeachingPlanId(null);
+            }
             try {
                 lr.setStudentNo(rs.getString("student_no"));
                 lr.setStudentName(rs.getString("student_name"));
@@ -38,16 +44,23 @@ public class LeaveRequestDAOImpl implements LeaveRequestDAO {
             } catch (SQLException e) {
                 // ignore
             }
+            try {
+                lr.setCourseName(rs.getString("course_name"));
+            } catch (SQLException e) {
+                // ignore
+            }
             return lr;
         }
     };
 
     private static final String BASE_SELECT = "SELECT lr.*, st.student_no, st.name as student_name, cl.class_name, " +
-            "u.real_name as approver_name " +
+            "u.real_name as approver_name, c.course_name as course_name " +
             "FROM leave_request lr " +
             "JOIN student st ON lr.student_id = st.id " +
             "JOIN class cl ON st.class_id = cl.id " +
-            "LEFT JOIN user u ON lr.approver_id = u.id ";
+            "LEFT JOIN user u ON lr.approver_id = u.id " +
+            "LEFT JOIN teaching_plan tp ON lr.teaching_plan_id = tp.id " +
+            "LEFT JOIN course c ON tp.course_id = c.id ";
 
     @Override
     public LeaveRequest findById(Integer id) {
@@ -61,8 +74,8 @@ public class LeaveRequestDAOImpl implements LeaveRequestDAO {
     @Override
     public int insert(LeaveRequest request) {
         try {
-            int id = DBUtil.executeInsert("INSERT INTO leave_request (student_id, start_date, end_date, reason, status, approver_id, approve_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    request.getStudentId(), request.getStartDate(), request.getEndDate(), request.getReason(), request.getStatus(),
+            int id = DBUtil.executeInsert("INSERT INTO leave_request (student_id, teaching_plan_id, start_date, start_hour, end_date, end_hour, reason, status, approver_id, approve_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    request.getStudentId(), request.getTeachingPlanId(), request.getStartDate(), request.getStartHour(), request.getEndDate(), request.getEndHour(), request.getReason(), request.getStatus(),
                     request.getApproverId(), request.getApproveTime(), request.getRemark());
             if (id > 0) {
                 request.setId(id);
@@ -77,8 +90,8 @@ public class LeaveRequestDAOImpl implements LeaveRequestDAO {
     @Override
     public int update(LeaveRequest request) {
         try {
-            return DBUtil.executeUpdate("UPDATE leave_request SET student_id = ?, start_date = ?, end_date = ?, reason = ?, status = ?, approver_id = ?, approve_time = ?, remark = ? WHERE id = ?",
-                    request.getStudentId(), request.getStartDate(), request.getEndDate(), request.getReason(), request.getStatus(),
+            return DBUtil.executeUpdate("UPDATE leave_request SET student_id = ?, teaching_plan_id = ?, start_date = ?, start_hour = ?, end_date = ?, end_hour = ?, reason = ?, status = ?, approver_id = ?, approve_time = ?, remark = ? WHERE id = ?",
+                    request.getStudentId(), request.getTeachingPlanId(), request.getStartDate(), request.getStartHour(), request.getEndDate(), request.getEndHour(), request.getReason(), request.getStatus(),
                     request.getApproverId(), request.getApproveTime(), request.getRemark(), request.getId());
         } catch (SQLException e) {
             throw new RuntimeException(e);

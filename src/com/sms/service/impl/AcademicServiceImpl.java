@@ -166,16 +166,7 @@ public class AcademicServiceImpl implements AcademicService {
         }
 
         // 3. 时间冲突检测
-        // Bug #5 修复：同时检查已选班级必修课和已选其他选修课的时间冲突
-        List<Schedule> classSchedules = scheduleDAO.findByClassId(student.getClassId(), plan.getSemester());
-        // 获取学生已选选修课的所有排课（class_id 为 null 的教学计划）
-        List<TeachingPlan> selectedElectives = listStudentSelectedPlans(studentId, plan.getSemester());
-        List<Schedule> allStudentSchedules = new java.util.ArrayList<>(classSchedules);
-        for (TeachingPlan elective : selectedElectives) {
-            if (elective.getClassId() == null && !elective.getId().equals(teachingPlanId)) {
-                allStudentSchedules.addAll(scheduleDAO.findByPlanId(elective.getId()));
-            }
-        }
+        List<Schedule> allStudentSchedules = scheduleDAO.findByStudentId(studentId, plan.getSemester());
         List<Schedule> planSchedules = scheduleDAO.findByPlanId(teachingPlanId);
 
         for (Schedule ps : planSchedules) {
@@ -262,6 +253,11 @@ public class AcademicServiceImpl implements AcademicService {
     @Override
     public List<Schedule> listSchedulesByClass(Integer classId, String semester) {
         return scheduleDAO.findByClassId(classId, semester);
+    }
+
+    @Override
+    public List<Schedule> listSchedulesByStudent(Integer studentId, String semester) {
+        return scheduleDAO.findByStudentId(studentId, semester);
     }
 
     @Override

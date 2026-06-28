@@ -17,6 +17,7 @@ import com.sms.dao.ScoreDAO;
 import com.sms.entity.Attendance;
 import com.sms.entity.Clazz;
 import com.sms.entity.LeaveRequest;
+import com.sms.entity.Schedule;
 import com.sms.entity.Teacher;
 import com.sms.entity.Notice;
 import com.sms.entity.Score;
@@ -330,8 +331,51 @@ public class EducationServiceImpl implements EducationService {
             cal.setTime(req.getStartDate());
             while (!cal.getTime().after(req.getEndDate())) {
                 Date leaveDate = new Date(cal.getTime().getTime());
+                
+                // Determine Day of Week for this leave date
+                java.util.Calendar tempCal = java.util.Calendar.getInstance();
+                tempCal.setTime(leaveDate);
+                int calendarDay = tempCal.get(java.util.Calendar.DAY_OF_WEEK);
+                int dayOfWeek = (calendarDay == java.util.Calendar.SUNDAY) ? 7 : (calendarDay - 1);
+                
                 for (Score sc : allScores) {
                     if (sc.getTeachingPlanId() == null) continue;
+                    
+                    // 如果请假单绑定了特定课程计划，只同步该课程
+                    if (req.getTeachingPlanId() != null && !req.getTeachingPlanId().equals(sc.getTeachingPlanId())) {
+                        continue;
+                    }
+                    
+                    // 检查这门课程在当天是否有排课，且排课时间与请假的时间点是否有交集
+                    List<Schedule> scheds = new com.sms.dao.impl.ScheduleDAOImpl().findByPlanId(sc.getTeachingPlanId());
+                    boolean hasOverlap = false;
+                    for (Schedule sch : scheds) {
+                        if (sch.getDayOfWeek() == dayOfWeek) {
+                            int classStartHour = getSectionStartHour(sch.getSectionStart());
+                            int classEndHour = getSectionEndHour(sch.getSectionEnd());
+                            
+                            // 检查请假小时段与课程上课小时段是否有交集
+                            boolean overlaps = false;
+                            if (leaveDate.toString().equals(req.getStartDate().toString()) && leaveDate.toString().equals(req.getEndDate().toString())) {
+                                overlaps = (classEndHour > req.getStartHour()) && (classStartHour < req.getEndHour());
+                            } else if (leaveDate.toString().equals(req.getStartDate().toString())) {
+                                overlaps = (classEndHour > req.getStartHour());
+                            } else if (leaveDate.toString().equals(req.getEndDate().toString())) {
+                                overlaps = (classStartHour < req.getEndHour());
+                            } else {
+                                overlaps = true;
+                            }
+                            if (overlaps) {
+                                hasOverlap = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!hasOverlap) {
+                        continue;
+                    }
+                    
                     // 检查当天是否已有考勤记录，避免重复插入
                     Attendance existing = attendanceDAO.findByStudentAndPlanAndDate(
                             req.getStudentId(), sc.getTeachingPlanId(), leaveDate);
@@ -548,5 +592,41 @@ public class EducationServiceImpl implements EducationService {
     @Override
     public void exportStatisticsToCSV(List<String> headers, List<List<String>> rows, String filePath) throws Exception {
         CSVUtil.writeCSV(filePath, headers, rows);
+    }
+
+    private static int getSectionStartHour(int section) {
+        switch (section) {
+            case 1: return 8;
+            case 2: return 9;
+            case 3: return 10;
+            case 4: return 11;
+            case 5: return 14;
+            case 6: return 15;
+            case 7: return 16;
+            case 8: return 17;
+            case 9: return 19;
+            case 10: return 20;
+            case 11: return 21;
+            case 12: return 22;
+            default: return 8;
+        }
+    }
+
+    private static int getSectionEndHour(int section) {
+        switch (section) {
+            case 1: return 9;
+            case 2: return 10;
+            case 3: return 11;
+            case 4: return 12;
+            case 5: return 15;
+            case 6: return 16;
+            case 7: return 17;
+            case 8: return 18;
+            case 9: return 20;
+            case 10: return 21;
+            case 11: return 22;
+            case 12: return 23;
+            default: return 23;
+        }
     }
 }
