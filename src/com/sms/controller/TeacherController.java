@@ -4,9 +4,11 @@ import com.sms.entity.*;
 import com.sms.service.AcademicService;
 import com.sms.service.AdminService;
 import com.sms.service.EducationService;
+import com.sms.service.UserService;
 import com.sms.service.impl.AcademicServiceImpl;
 import com.sms.service.impl.AdminServiceImpl;
 import com.sms.service.impl.EducationServiceImpl;
+import com.sms.service.impl.UserServiceImpl;
 import com.sms.util.ConsoleUtil;
 import java.sql.Date;
 import java.util.ArrayList;
@@ -20,6 +22,7 @@ public class TeacherController {
     private final AdminService adminService = new AdminServiceImpl();
     private final AcademicService academicService = new AcademicServiceImpl();
     private final EducationService educationService = new EducationServiceImpl();
+    private final UserService userService = new UserServiceImpl();
 
     public void showMainMenu(User loggedInUser) {
         Teacher teacher = adminService.getTeacherByUserId(loggedInUser.getId());
@@ -37,10 +40,11 @@ public class TeacherController {
                     "[3] 课堂考勤点名",
                     "[4] 学生请假审批",
                     "[5] 发布公告通知",
+                    "[6] 修改我的密码",
                     "[0] 返回登录主页"
             );
             ConsoleUtil.printMenu("教师服务终端 — 当前教师: " + teacher.getName() + " (" + teacher.getTitle() + ")", items);
-            int choice = ConsoleUtil.readChoice("请选择操作", 5);
+            int choice = ConsoleUtil.readChoice("请选择操作", 6);
             if (choice == 0) break;
             switch (choice) {
                 case 1: viewMySchedule(teacher, "2025-2026-1"); break;
@@ -48,6 +52,7 @@ public class TeacherController {
                 case 3: manageAttendance(teacher, "2025-2026-1"); break;
                 case 4: manageLeaves(loggedInUser); break;
                 case 5: manageNotices(loggedInUser); break;
+                case 6: changeMyPassword(loggedInUser); break;
             }
         }
     }
@@ -622,5 +627,25 @@ public class TeacherController {
         int choice = ConsoleUtil.readChoice("选择", plans.size());
         if (choice == 0) return null;
         return plans.get(choice - 1).getId();
+    }
+
+    private void changeMyPassword(User loggedInUser) {
+        System.out.println("---- 修改我的密码 ----");
+        String oldPwd = ConsoleUtil.readPassword("请输入原密码");
+        String newPwd = ConsoleUtil.readLine("请输入新密码 (回车取消)", false);
+        
+        if (newPwd.trim().isEmpty()) {
+            ConsoleUtil.printError("密码不能为空，操作已取消。");
+            ConsoleUtil.pause();
+            return;
+        }
+        
+        try {
+            userService.changePassword(loggedInUser.getId(), oldPwd, newPwd);
+            ConsoleUtil.printSuccess("密码修改成功！下次登录请使用新密码。");
+        } catch (Exception e) {
+            ConsoleUtil.printError("修改失败: " + e.getMessage());
+        }
+        ConsoleUtil.pause();
     }
 }
